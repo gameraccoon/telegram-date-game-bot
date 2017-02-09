@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 	"io/ioutil"
-	//"strconv"
+	"encoding/json"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/gameraccoon/telegram-date-game-bot/game"
 )
 
-func getApiToken() string {
-	fileContent, err := ioutil.ReadFile("./telegramApiToken.txt")
+func getFileStringContent(filePath string) string {
+	fileContent, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -19,9 +19,17 @@ func getApiToken() string {
 	return strings.TrimSpace(string(fileContent))
 }
 
+func getApiToken() string {
+	return getFileStringContent("./telegramApiToken.txt")
+}
+
 func remove(s []int, i int) []int {
     s[len(s)-1], s[i] = s[i], s[len(s)-1]
     return s[:len(s)-1]
+}
+
+func getStaticDataJsonString() string {
+	return getFileStringContent("./staticData.json")
 }
 
 func main() {
@@ -37,6 +45,16 @@ func main() {
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 	
 	players := make(map[int64]*game.Player)
+	
+	var staticData game.StaticData
+	
+	{
+		dec := json.NewDecoder(strings.NewReader(getStaticDataJsonString()))
+		err := dec.Decode(&staticData);
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	
 	// only one because there are no matching by sex yet
 	var freePlayer *game.Player;
@@ -70,6 +88,12 @@ func main() {
 			}
 			
 			players[update.Message.Chat.ID] = player
+		}
+		
+		{	
+			message := "action: " + staticData.Actions["TestActionId"].Name
+			msg := tgbotapi.NewMessage(player.ChatId(), message)
+			bot.Send(msg)
 		}
 		
 		// if we need a match

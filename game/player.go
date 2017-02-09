@@ -1,14 +1,8 @@
 package game
 
-import (
-	//"log"
-	//"fmt"
-	//"strings"
-)
-
 type Player struct {
 	chatId int64
-	name string // for debug purposes
+	name string // only for debug purposes
 	game *Game
 }
 

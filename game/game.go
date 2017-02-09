@@ -1,16 +1,24 @@
 package game
 
 import (
-	//"log"
-	//"fmt"
-	//"strings"
-	//"encoding/json"
+	"github.com/mattn/anko/vm"
 )
 
 type Game struct {
 	playerM *Player
 	playerW *Player
-	blackboard Blackboard
+	env *vm.Env
+}
+
+func (thisGame *Game) Init() {
+	thisGame.env = vm.NewEnv()
+}
+
+func (thisGame *Game) Execute(command string) {
+	_, err := thisGame.env.Execute(command)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (thisGame *Game) SetPlayerM(player *Player) {
