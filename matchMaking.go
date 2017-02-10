@@ -2,25 +2,36 @@ package main
 
 import "github.com/gameraccoon/telegram-date-game-bot/game"
 
-func findAMatch(player *game.Player, freePlayer **game.Player) (match *game.Player) {
-	// if we are first
-	if *freePlayer == nil {
-		// put ourselves into match queue
-		*freePlayer = player
-	} else {
-		// if there are another player to match
-		if player != *freePlayer {
-			match = *freePlayer
-			// remove the player from queue
-			*freePlayer = nil
+func matchPlayers(femalePlayer *game.Player, malePlayer *game.Player) {
+	// make a new world for these players
+	world := &game.World{}
+	world.SetPlayerF(femalePlayer)
+	world.SetPlayerM(malePlayer)
+	femalePlayer.SetWorld(world)
+	malePlayer.SetWorld(world)
+}
+
+func findAMatch(player *game.Player, freePlayers *freePlayers) (opponent *game.Player) {
+	if player.Gender() == game.Female {
+		if len(freePlayers.male) > 0 {
+			opponent = freePlayers.male[0]
+			freePlayers.male = freePlayers.male[1:]
 			
-			// make game
-			world := &game.World{}
-			world.SetPlayerM(player)
-			world.SetPlayerW(match)
-			match.SetWorld(world)
-			player.SetWorld(world)
+			matchPlayers(player, opponent)
+		} else {
+			freePlayers.female = append(freePlayers.female, player)
 		}
+	} else if player.Gender() == game.Male {
+		if len(freePlayers.female) > 0 {
+			opponent = freePlayers.female[0]
+			freePlayers.female = freePlayers.female[1:]
+			
+			matchPlayers(player, opponent)
+		} else {
+			freePlayers.male = append(freePlayers.male, player)
+		}
+	} else {
+		panic("Gender is not set")
 	}
 	
 	return

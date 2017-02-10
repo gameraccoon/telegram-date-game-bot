@@ -1,8 +1,17 @@
 package game
 
+type Gender int
+
+const (
+	Undefined Gender = iota
+	Female
+	Male
+)
+
 type Player struct {
 	chatId int64
 	name string // only for debug purposes
+	gender Gender
 	world *World
 }
 
@@ -28,4 +37,12 @@ func (thisPlayer *Player) SetName(name string) {
 
 func (thisPlayer *Player) Name() string {
 	return thisPlayer.name
+}
+
+func (thisPlayer *Player) SetGender(gender Gender) {
+	thisPlayer.gender = gender
+}
+
+func (thisPlayer *Player) Gender() Gender {
+	return thisPlayer.gender
 }

@@ -5,8 +5,8 @@ import (
 )
 
 type World struct {
+	playerF *Player
 	playerM *Player
-	playerW *Player
 	env *vm.Env
 }
 
@@ -21,18 +21,18 @@ func (thisWorld *World) Execute(command string) {
 	}
 }
 
+func (thisWorld *World) SetPlayerF(player *Player) {
+	thisWorld.playerF = player
+}
+
 func (thisWorld *World) SetPlayerM(player *Player) {
 	thisWorld.playerM = player
 }
 
-func (thisWorld *World) SetPlayerW(player *Player) {
-	thisWorld.playerW = player
+func (thisWorld *World) PlayerF() *Player {
+	return thisWorld.playerF
 }
 
 func (thisWorld *World) PlayerM() *Player {
 	return thisWorld.playerM
-}
-
-func (thisWorld *World) PlayerW() *Player {
-	return thisWorld.playerW
 }

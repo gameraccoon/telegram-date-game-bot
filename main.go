@@ -10,6 +10,16 @@ import (
 	"github.com/gameraccoon/telegram-date-game-bot/game"
 )
 
+type messages struct {
+	messageToSender string
+	messageToOpponent string
+}
+
+type freePlayers struct {
+	female []*game.Player
+	male []*game.Player
+}
+
 func getFileStringContent(filePath string) string {
 	fileContent, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -45,55 +55,81 @@ func makeOrFindPlayer(message *tgbotapi.Message, players *map[int64]*game.Player
 				player.SetName(user.FirstName)
 			}
 		}
-
+		
 		(*players)[message.Chat.ID] = player
 	}
 	
 	return player
 }
 
-type messages struct {
-	messageToSender string
-	messageToOpponent string
-}
-
 func sendMessages(bot *tgbotapi.BotAPI, sender *game.Player, opponent *game.Player, messages *messages) {
-	if messages.messageToSender != "" && sender.ChatId() != 0 {
+	if sender != nil && sender.ChatId() != 0 && messages.messageToSender != "" {
 		msg := tgbotapi.NewMessage(sender.ChatId(), messages.messageToSender)
 		bot.Send(msg)
 	}
-	if messages.messageToOpponent != "" && opponent.ChatId() != 0 {
+	if opponent != nil && opponent.ChatId() != 0 && messages.messageToOpponent != "" {
 		msg := tgbotapi.NewMessage(opponent.ChatId(), messages.messageToOpponent)
 		bot.Send(msg)
 	}
 }
 
+func chooseGender(update *tgbotapi.Update, bot *tgbotapi.BotAPI, player *game.Player) (succeeded bool) {
+	messages := &messages{}
+	if (update.Message.Text == "F") {
+		player.SetGender(game.Female)
+		messages.messageToSender = "So you're a woman"
+		succeeded = true
+	} else if (update.Message.Text == "M") {
+		player.SetGender(game.Male)
+		messages.messageToSender = "So you're a man"
+		succeeded = true
+	} else {
+		messages.messageToSender = "Pleace select your gender (M/F). It can't be changed."
+		succeeded = false
+	}
+
+	sendMessages(bot, player, nil, messages)
+	return
+}
+
+func matchPlayer(bot *tgbotapi.BotAPI, freePlayers *freePlayers, player *game.Player) {
+	matchedPlayer := findAMatch(player, freePlayers)
+	
+	// send messages to players if an opponent is found
+	if matchedPlayer != nil {
+		messages := &messages {
+			messageToSender : "match " + matchedPlayer.Name(),
+			messageToOpponent : "match " + player.Name(),
+		}
+
+		sendMessages(bot, player, matchedPlayer, messages)
+	} else {
+		messages := &messages {
+			messageToSender : "Searching for players",
+		}
+
+		sendMessages(bot, player, nil, messages)
+	}
+}
+
 func processUpdate(update *tgbotapi.Update, bot *tgbotapi.BotAPI, players *map[int64]*game.Player,
-				   staticData *game.StaticData, freePlayer **game.Player) {
+				   staticData *game.StaticData, freePlayers *freePlayers) {
 	
 	player := makeOrFindPlayer(update.Message, players)
-
-	// if we need a match
-	if player.World() == nil {
-		matchedPlayer := findAMatch(player, freePlayer)
-
-		// send messages to players if an opponent is found
-		if matchedPlayer != nil {
-			messages := &messages {
-				messageToSender : "match " + matchedPlayer.Name(),
-				messageToOpponent : "match " + player.Name(),
-			}
-			
-			sendMessages(bot, player, matchedPlayer, messages)
+	
+	if player.Gender() == game.Undefined { // if we need to choose a gender
+		isSucceeded := chooseGender(update, bot, player)
+		if isSucceeded {
+			matchPlayer(bot, freePlayers, player)
 		}
+	} else if player.World() == nil { // if we need a match
+		matchPlayer(bot, freePlayers, player)
 	} else {
-		
-		// find opponent
 		var opponent *game.Player
 		{
 			world := player.World()
 			if world.PlayerM() == player {
-				opponent = world.PlayerW()
+				opponent = world.PlayerF()
 			} else {
 				opponent = world.PlayerM()
 			}
@@ -129,8 +165,10 @@ func main() {
 		}
 	}
 	
-	// only one because there are no matching by sex yet
-	var freePlayer *game.Player;
+	freePlayers := &freePlayers{
+		female : make([]*game.Player, 0),
+		male : make([]*game.Player, 0),
+	}
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -142,6 +180,6 @@ func main() {
 			continue
 		}
 		
-		processUpdate(&update, bot, &players, &staticData, &freePlayer)
+		processUpdate(&update, bot, &players, &staticData, freePlayers)
 	}
 }
