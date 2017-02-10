@@ -23,13 +23,86 @@ func getApiToken() string {
 	return getFileStringContent("./telegramApiToken.txt")
 }
 
-func remove(s []int, i int) []int {
-    s[len(s)-1], s[i] = s[i], s[len(s)-1]
-    return s[:len(s)-1]
-}
-
 func getStaticDataJsonString() string {
 	return getFileStringContent("./staticData.json")
+}
+
+func makeOrFindPlayer(message *tgbotapi.Message, players *map[int64]*game.Player) *game.Player {
+	// find an already created player
+	player, ok := (*players)[message.Chat.ID]
+		
+	// create if not found
+	if !ok {
+		player = &game.Player{}
+
+		player.SetChatId(message.Chat.ID)
+
+		user := message.From
+		if user != nil {
+			if len(user.UserName) > 0 {
+				player.SetName(user.UserName)
+			} else {
+				player.SetName(user.FirstName)
+			}
+		}
+
+		(*players)[message.Chat.ID] = player
+	}
+	
+	return player
+}
+
+type messages struct {
+	messageToSender string
+	messageToOpponent string
+}
+
+func sendMessages(bot *tgbotapi.BotAPI, sender *game.Player, opponent *game.Player, messages *messages) {
+	if messages.messageToSender != "" && sender.ChatId() != 0 {
+		msg := tgbotapi.NewMessage(sender.ChatId(), messages.messageToSender)
+		bot.Send(msg)
+	}
+	if messages.messageToOpponent != "" && opponent.ChatId() != 0 {
+		msg := tgbotapi.NewMessage(opponent.ChatId(), messages.messageToOpponent)
+		bot.Send(msg)
+	}
+}
+
+func processUpdate(update *tgbotapi.Update, bot *tgbotapi.BotAPI, players *map[int64]*game.Player,
+				   staticData *game.StaticData, freePlayer **game.Player) {
+	
+	player := makeOrFindPlayer(update.Message, players)
+
+	// if we need a match
+	if player.World() == nil {
+		matchedPlayer := findAMatch(player, freePlayer)
+
+		// send messages to players if an opponent is found
+		if matchedPlayer != nil {
+			messages := &messages {
+				messageToSender : "match " + matchedPlayer.Name(),
+				messageToOpponent : "match " + player.Name(),
+			}
+			
+			sendMessages(bot, player, matchedPlayer, messages)
+		}
+	} else {
+		
+		// find opponent
+		var opponent *game.Player
+		{
+			world := player.World()
+			if world.PlayerM() == player {
+				opponent = world.PlayerW()
+			} else {
+				opponent = world.PlayerM()
+			}
+		}
+		
+		messages := processCommand(player, opponent, &update.Message.Text)
+		
+		sendMessages(bot, player, opponent, messages)
+	}
 }
 
 func main() {
@@ -69,95 +142,6 @@ func main() {
 			continue
 		}
 		
-		// find already created player
-		player, ok := players[update.Message.Chat.ID]
-		
-		// create if not found
-		if !ok {
-			player = &game.Player{}
-			
-			player.SetChatId(update.Message.Chat.ID)
-			
-			user := update.Message.From
-			if user != nil {
-				if len(user.UserName) > 0 {
-					player.SetName(user.UserName)
-				} else {
-					player.SetName(user.FirstName)
-				}
-			}
-			
-			players[update.Message.Chat.ID] = player
-		}
-		
-		{	
-			message := "action: " + staticData.Actions["TestActionId"].Name
-			msg := tgbotapi.NewMessage(player.ChatId(), message)
-			bot.Send(msg)
-		}
-		
-		// if we need a match
-		if player.Game() == nil {
-			// if we are first
-			if freePlayer == nil {
-				// put ourselves into match queue
-				freePlayer = player
-			} else {
-				// if there are another player to match
-				if player != freePlayer {
-					// make game
-					game := &game.Game{}
-					game.SetPlayerM(player)
-					game.SetPlayerW(freePlayer)
-					freePlayer.SetGame(game)
-					player.SetGame(game)
-
-					// remove the player from queue
-					freePlayer = nil
-
-					// send messages to players
-					{
-						message := "match " + game.PlayerM().Name()
-						msg := tgbotapi.NewMessage(game.PlayerW().ChatId(), message)
-						bot.Send(msg)
-					}
-					{
-						message := "match " + game.PlayerW().Name()
-						msg := tgbotapi.NewMessage(game.PlayerM().ChatId(), message)
-						bot.Send(msg)
-					}
-				}
-			}
-		} else {
-			game := player.Game()
-			gamePlayer := game.PlayerM()
-			if gamePlayer == player {
-				gamePlayer = game.PlayerW()
-			}
-			
-			if update.Message.Text == "/disconnect" {
-				player.SetGame(nil)
-				gamePlayer.SetGame(nil)
-				
-				{
-					message := "disconnected"
-					msg := tgbotapi.NewMessage(player.ChatId(), message)
-					bot.Send(msg)
-				}
-				{
-					message := "player left"
-					msg := tgbotapi.NewMessage(gamePlayer.ChatId(), message)
-					bot.Send(msg)
-				}
-				
-				continue
-			}
-			
-			if gamePlayer != nil {
-				msg := tgbotapi.NewMessage(gamePlayer.ChatId(), "> " + update.Message.Text)
-				bot.Send(msg)
-			}
-		}
+		processUpdate(&update, bot, &players, &staticData, &freePlayer)
 	}
 }
-

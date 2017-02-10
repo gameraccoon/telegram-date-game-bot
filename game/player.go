@@ -3,7 +3,7 @@ package game
 type Player struct {
 	chatId int64
 	name string // only for debug purposes
-	game *Game
+	world *World
 }
 
 func (thisPlayer *Player) SetChatId(chatId int64) {
@@ -14,12 +14,12 @@ func (thisPlayer *Player) ChatId() int64 {
 	return thisPlayer.chatId
 }
 
-func (thisPlayer *Player) SetGame(game *Game) {
-	thisPlayer.game = game
+func (thisPlayer *Player) SetWorld(world *World) {
+	thisPlayer.world = world
 }
 
-func (thisPlayer *Player) Game() *Game {
-	return thisPlayer.game
+func (thisPlayer *Player) World() *World {
+	return thisPlayer.world
 }
 
 func (thisPlayer *Player) SetName(name string) {
