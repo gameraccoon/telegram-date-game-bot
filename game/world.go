@@ -12,6 +12,17 @@ type World struct {
 
 func (thisWorld *World) Init() {
 	thisWorld.env = vm.NewEnv()
+	// create blackboard
+	thisWorld.env.Execute("b = {}")
+}
+
+func (thisWorld *World) IsTrue(command string) bool {
+	result, err := thisWorld.env.Execute(command)
+	if err != nil {
+		panic(err)
+	}
+	
+	return result.Bool()
 }
 
 func (thisWorld *World) Execute(command string) {

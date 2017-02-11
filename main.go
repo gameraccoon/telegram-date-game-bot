@@ -75,21 +75,33 @@ func sendMessages(bot *tgbotapi.BotAPI, sender *game.Player, opponent *game.Play
 
 func chooseGender(update *tgbotapi.Update, bot *tgbotapi.BotAPI, player *game.Player) (succeeded bool) {
 	messages := &messages{}
-	if (update.Message.Text == "F") {
+	if (update.Message.Text == "/female") {
 		player.SetGender(game.Female)
 		messages.messageToSender = "So you're a woman"
 		succeeded = true
-	} else if (update.Message.Text == "M") {
+	} else if (update.Message.Text == "/male") {
 		player.SetGender(game.Male)
 		messages.messageToSender = "So you're a man"
 		succeeded = true
 	} else {
-		messages.messageToSender = "Pleace select your gender (M/F). It can't be changed."
+		messages.messageToSender = "Pleace select your gender: /male /female. It can't be changed."
 		succeeded = false
 	}
 
 	sendMessages(bot, player, nil, messages)
 	return
+}
+
+func sendSummary(bot *tgbotapi.BotAPI, player *game.Player, opponent *game.Player) {
+	
+	summaryText := "Send /act to see the list of actions"
+	
+	messages := &messages {
+		messageToSender : summaryText,
+		messageToOpponent : summaryText,
+	}
+
+	sendMessages(bot, player, opponent, messages)
 }
 
 func matchPlayer(bot *tgbotapi.BotAPI, freePlayers *freePlayers, player *game.Player) {
@@ -103,6 +115,8 @@ func matchPlayer(bot *tgbotapi.BotAPI, freePlayers *freePlayers, player *game.Pl
 		}
 
 		sendMessages(bot, player, matchedPlayer, messages)
+		
+		sendSummary(bot, player, matchedPlayer)
 	} else {
 		messages := &messages {
 			messageToSender : "Searching for players",
@@ -135,7 +149,7 @@ func processUpdate(update *tgbotapi.Update, bot *tgbotapi.BotAPI, players *map[i
 			}
 		}
 		
-		messages := processCommand(player, opponent, &update.Message.Text)
+		messages := processCommand(player, opponent, staticData, &update.Message.Text)
 		
 		sendMessages(bot, player, opponent, messages)
 	}

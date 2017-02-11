@@ -5,6 +5,7 @@ import "github.com/gameraccoon/telegram-date-game-bot/game"
 func matchPlayers(femalePlayer *game.Player, malePlayer *game.Player) {
 	// make a new world for these players
 	world := &game.World{}
+	world.Init()
 	world.SetPlayerF(femalePlayer)
 	world.SetPlayerM(malePlayer)
 	femalePlayer.SetWorld(world)
