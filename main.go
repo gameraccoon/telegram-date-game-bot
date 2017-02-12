@@ -95,51 +95,51 @@ func sendMessages(bot *tgbotapi.BotAPI, sender *game.Player, opponent *game.Play
 }
 
 func chooseGender(update *tgbotapi.Update, bot *tgbotapi.BotAPI, player *game.Player) (succeeded bool) {
-	messages := &messages{}
+	
 	if (update.Message.Text == "/female") {
 		player.SetGender(game.Female)
-		messages.messageToSender = "So you're a woman"
 		succeeded = true
 	} else if (update.Message.Text == "/male") {
 		player.SetGender(game.Male)
-		messages.messageToSender = "So you're a man"
 		succeeded = true
 	} else {
-		messages.messageToSender = "Please select your gender: /male /female. It can't be changed."
+		messages := &messages{
+			messageToSender : "Please select your gender: /male /female. It can't be changed.",
+		}
+		sendMessages(bot, player, nil, messages)
+		
 		succeeded = false
 	}
-
-	sendMessages(bot, player, nil, messages)
 	return
 }
 
-func sendSummary(bot *tgbotapi.BotAPI, world *game.World) {
-	
-	summaryText := "Send /act to see the full list of available actions"
-	
-	messages := &messages {
-		messageToSender : summaryText,
+func genderRelatedText(player *game.Player, femaleText string, maleText string) string {
+	if player.Gender() == game.Female {
+		return femaleText
+	} else {
+		return maleText
 	}
-
-	sendMessages(bot, world.CurrentPlayer(), nil, messages)
 }
 
 func matchPlayer(bot *tgbotapi.BotAPI, freePlayers *freePlayers, player *game.Player) {
 	matchedPlayer := findAMatch(player, freePlayers)
 	
 	// send messages to players if an opponent is found
-	if matchedPlayer != nil {
+	if matchedPlayer != nil {		
+		summaryText := fmt.Sprintf("You came to your friend. %s must've been waiting you for a long time.\nThis is %s door\n/act - see the full list of available actions",
+								   genderRelatedText(player, "He", "She"),
+								   genderRelatedText(player, "his", "her"))
+	
 		messages := &messages {
-			messageToSender : "match " + matchedPlayer.Name(),
-			messageToOpponent : "match " + player.Name(),
+			messageToSender : summaryText,
 		}
 
-		sendMessages(bot, player, matchedPlayer, messages)
-		
-		sendSummary(bot, player.World())
+		sendMessages(bot, player, nil, messages)
 	} else {
 		messages := &messages {
-			messageToSender : "Searching for players",
+			messageToSender : fmt.Sprintf("You're waiting for your friend's coming. %s said that %s'll come very soon.",
+										  genderRelatedText(player, "He", "She"),
+										  genderRelatedText(player, "he", "she")),
 		}
 
 		sendMessages(bot, player, nil, messages)
