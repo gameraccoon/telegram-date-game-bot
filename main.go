@@ -64,9 +64,15 @@ func makeOrFindPlayer(message *tgbotapi.Message, players *map[int64]*game.Player
 	return player
 }
 
-func formatMessage(message *string, sender *game.Player) string {
-	data := map[string]interface{}{
-		"Name": sender.Name(),
+func formatMessage(message *string, player *game.Player, opponent *game.Player) string {
+	data := map[string]interface{}{}
+	
+	if opponent != nil {
+		data["Name"] = opponent.Name()
+	}
+	
+	if player != nil {
+		data["YourName"] = player.Name()
 	}
 
 	t := template.Must(template.New("").Parse(*message))
@@ -79,11 +85,11 @@ func formatMessage(message *string, sender *game.Player) string {
 
 func sendMessages(bot *tgbotapi.BotAPI, sender *game.Player, opponent *game.Player, messages *messages) {
 	if sender != nil && sender.ChatId() != 0 && messages.messageToSender != "" {
-		msg := tgbotapi.NewMessage(sender.ChatId(), messages.messageToSender)
+		msg := tgbotapi.NewMessage(sender.ChatId(), formatMessage(&messages.messageToSender, sender, opponent))
 		bot.Send(msg)
 	}
 	if opponent != nil && opponent.ChatId() != 0 && messages.messageToOpponent != "" {
-		msg := tgbotapi.NewMessage(opponent.ChatId(), formatMessage(&messages.messageToOpponent, sender))
+		msg := tgbotapi.NewMessage(opponent.ChatId(), formatMessage(&messages.messageToOpponent, opponent, sender))
 		bot.Send(msg)
 	}
 }

@@ -45,13 +45,22 @@ func processCommand(player *game.Player, opponent *game.Player, staticData *game
 			if action != nil {
 				if world.IsTrue(action.Requirements) {
 					world.Execute(action.Action)
-
+					
 					if player.Gender() == game.Female {
 						resultMessages.messageToSender = action.TextInstigatorF
 						resultMessages.messageToOpponent = action.TextReceiverF
 					} else if player.Gender() == game.Male {
-						resultMessages.messageToSender = action.TextInstigatorM
-						resultMessages.messageToOpponent = action.TextReceiverM
+						if action.TextInstigatorM != nil {
+							resultMessages.messageToSender = *action.TextInstigatorM
+						} else {
+							resultMessages.messageToSender = action.TextInstigatorF
+						}
+						
+						if action.TextReceiverM != nil {
+							resultMessages.messageToOpponent = *action.TextReceiverM
+						} else {
+							resultMessages.messageToOpponent = action.TextReceiverF
+						}
 					}
 					
 					world.ChangeTurn()
@@ -66,7 +75,7 @@ func processCommand(player *game.Player, opponent *game.Player, staticData *game
 								buffer.WriteString("/act_" + id + " - " + reaction.Name + "\n")
 							}
 						} else {
-							panic("unknown acton")
+							panic("unknown acton " + id)
 						}
 					}
 					buffer.WriteString("/act - full list of available actions")
