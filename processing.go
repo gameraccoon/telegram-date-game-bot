@@ -55,11 +55,26 @@ func processCommand(player *game.Player, opponent *game.Player, staticData *game
 					}
 					
 					world.ChangeTurn()
+					
+					var buffer bytes.Buffer
+					
+					buffer.WriteString(resultMessages.messageToOpponent + "\n\n")
+					for _, id := range action.Reactions {
+						reaction := staticData.Actions[id]
+						if reaction != nil {
+							if world.IsTrue(reaction.Requirements) {
+								buffer.WriteString("/act_" + id + " - " + reaction.Name + "\n")
+							}
+						} else {
+							panic("unknown acton")
+						}
+					}
+					buffer.WriteString("/act - full list of available actions")
+
+					resultMessages.messageToOpponent = buffer.String()
 				} else {
 					resultMessages.messageToSender = "You can't use this action"
 				}
-			} else {
-				panic("Unknown action \"" + actionId + "\"")
 			}
 		}
 	} else {
