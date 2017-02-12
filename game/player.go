@@ -10,7 +10,7 @@ const (
 
 type Player struct {
 	chatId int64
-	name string // only for debug purposes
+	name string
 	gender Gender
 	world *World
 }

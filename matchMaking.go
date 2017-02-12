@@ -2,7 +2,7 @@ package main
 
 import "github.com/gameraccoon/telegram-date-game-bot/game"
 
-func matchPlayers(femalePlayer *game.Player, malePlayer *game.Player) {
+func matchPlayers(firstPlayer *game.Player, femalePlayer *game.Player, malePlayer *game.Player) {
 	// make a new world for these players
 	world := &game.World{}
 	world.Init()
@@ -10,6 +10,7 @@ func matchPlayers(femalePlayer *game.Player, malePlayer *game.Player) {
 	world.SetPlayerM(malePlayer)
 	femalePlayer.SetWorld(world)
 	malePlayer.SetWorld(world)
+	world.InitTurn(firstPlayer)
 }
 
 func findAMatch(player *game.Player, freePlayers *freePlayers) (opponent *game.Player) {
@@ -18,7 +19,7 @@ func findAMatch(player *game.Player, freePlayers *freePlayers) (opponent *game.P
 			opponent = freePlayers.male[0]
 			freePlayers.male = freePlayers.male[1:]
 			
-			matchPlayers(player, opponent)
+			matchPlayers(player, player, opponent)
 		} else {
 			freePlayers.female = append(freePlayers.female, player)
 		}
@@ -27,7 +28,7 @@ func findAMatch(player *game.Player, freePlayers *freePlayers) (opponent *game.P
 			opponent = freePlayers.female[0]
 			freePlayers.female = freePlayers.female[1:]
 			
-			matchPlayers(player, opponent)
+			matchPlayers(player, opponent, player)
 		} else {
 			freePlayers.male = append(freePlayers.male, player)
 		}

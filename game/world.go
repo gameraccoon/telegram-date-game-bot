@@ -8,6 +8,8 @@ type World struct {
 	playerF *Player
 	playerM *Player
 	env *vm.Env
+	currentPlayer *Player
+	opponent *Player
 }
 
 func (thisWorld *World) Init() {
@@ -46,4 +48,34 @@ func (thisWorld *World) PlayerF() *Player {
 
 func (thisWorld *World) PlayerM() *Player {
 	return thisWorld.playerM
+}
+
+func (thisWorld *World) CurrentPlayer() *Player {
+	return thisWorld.currentPlayer
+}
+
+func (thisWorld *World) Opponent() *Player {
+	return thisWorld.opponent
+}
+
+func (thisWorld *World) InitTurn(forcedPlayer *Player) {
+	if (forcedPlayer == thisWorld.playerF) {
+		thisWorld.currentPlayer = thisWorld.playerF
+		thisWorld.opponent = thisWorld.playerM
+	} else if (forcedPlayer == thisWorld.playerM) {
+		thisWorld.currentPlayer = thisWorld.playerM
+		thisWorld.opponent = thisWorld.playerF
+	} else {
+		panic("unknown player")
+	}
+}
+
+func (thisWorld *World) ChangeTurn() {
+	if thisWorld.currentPlayer == nil || thisWorld.opponent == nil {
+		panic("players haven't initialized")
+	} else {
+		temp := thisWorld.currentPlayer
+		thisWorld.currentPlayer = thisWorld.opponent
+		thisWorld.opponent = temp
+	}
 }

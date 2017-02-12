@@ -3,7 +3,9 @@ package main
 import (
 	"log"
 	"fmt"
+	"bytes"
 	"strings"
+	"text/template"
 	"io/ioutil"
 	"encoding/json"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
@@ -62,13 +64,26 @@ func makeOrFindPlayer(message *tgbotapi.Message, players *map[int64]*game.Player
 	return player
 }
 
+func formatMessage(message *string, sender *game.Player) string {
+	data := map[string]interface{}{
+		"Name": sender.Name(),
+	}
+
+	t := template.Must(template.New("").Parse(*message))
+	buf := &bytes.Buffer{}
+	if err := t.Execute(buf, data); err != nil {
+		panic(err)
+	}
+	return buf.String()
+}
+
 func sendMessages(bot *tgbotapi.BotAPI, sender *game.Player, opponent *game.Player, messages *messages) {
 	if sender != nil && sender.ChatId() != 0 && messages.messageToSender != "" {
 		msg := tgbotapi.NewMessage(sender.ChatId(), messages.messageToSender)
 		bot.Send(msg)
 	}
 	if opponent != nil && opponent.ChatId() != 0 && messages.messageToOpponent != "" {
-		msg := tgbotapi.NewMessage(opponent.ChatId(), messages.messageToOpponent)
+		msg := tgbotapi.NewMessage(opponent.ChatId(), formatMessage(&messages.messageToOpponent, sender))
 		bot.Send(msg)
 	}
 }
@@ -84,7 +99,7 @@ func chooseGender(update *tgbotapi.Update, bot *tgbotapi.BotAPI, player *game.Pl
 		messages.messageToSender = "So you're a man"
 		succeeded = true
 	} else {
-		messages.messageToSender = "Pleace select your gender: /male /female. It can't be changed."
+		messages.messageToSender = "Please select your gender: /male /female. It can't be changed."
 		succeeded = false
 	}
 
@@ -92,16 +107,15 @@ func chooseGender(update *tgbotapi.Update, bot *tgbotapi.BotAPI, player *game.Pl
 	return
 }
 
-func sendSummary(bot *tgbotapi.BotAPI, player *game.Player, opponent *game.Player) {
+func sendSummary(bot *tgbotapi.BotAPI, world *game.World) {
 	
-	summaryText := "Send /act to see the list of actions"
+	summaryText := "Send /act to see the full list of available actions"
 	
 	messages := &messages {
 		messageToSender : summaryText,
-		messageToOpponent : summaryText,
 	}
 
-	sendMessages(bot, player, opponent, messages)
+	sendMessages(bot, world.CurrentPlayer(), nil, messages)
 }
 
 func matchPlayer(bot *tgbotapi.BotAPI, freePlayers *freePlayers, player *game.Player) {
@@ -116,7 +130,7 @@ func matchPlayer(bot *tgbotapi.BotAPI, freePlayers *freePlayers, player *game.Pl
 
 		sendMessages(bot, player, matchedPlayer, messages)
 		
-		sendSummary(bot, player, matchedPlayer)
+		sendSummary(bot, player.World())
 	} else {
 		messages := &messages {
 			messageToSender : "Searching for players",
