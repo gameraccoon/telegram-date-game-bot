@@ -48,15 +48,6 @@ func makeOrFindPlayer(message *tgbotapi.Message, players *map[int64]*game.Player
 		player = &game.Player{}
 
 		player.SetChatId(message.Chat.ID)
-
-		user := message.From
-		if user != nil {
-			if len(user.UserName) > 0 {
-				player.SetName(user.UserName)
-			} else {
-				player.SetName(user.FirstName)
-			}
-		}
 		
 		(*players)[message.Chat.ID] = player
 	}
@@ -104,7 +95,47 @@ func chooseGender(update *tgbotapi.Update, bot *tgbotapi.BotAPI, player *game.Pl
 		succeeded = true
 	} else {
 		messages := &messages{
-			messageToSender : "Please select your gender: /male /female. It can't be changed.",
+			messageToSender : "Select your gender: /male /female. It can't be changed.",
+		}
+		sendMessages(bot, player, nil, messages)
+		
+		succeeded = false
+	}
+	return
+}
+
+func chooseName(update *tgbotapi.Update, bot *tgbotapi.BotAPI, player *game.Player, staticData *game.StaticData) (succeeded bool) {
+	succeeded = false
+	var namesList *[]string
+	if player.Gender() == game.Female {
+		namesList = &staticData.NamesF
+	} else if player.Gender() == game.Male {
+		namesList = &staticData.NamesM
+	} else {
+		panic("gender hasn't set")
+	}
+	
+	if strings.HasPrefix(update.Message.Text, "/") {
+		receivedName := update.Message.Text[1:len(update.Message.Text)]
+		for _, name := range *namesList {
+			if name == receivedName {
+				player.SetName(receivedName)
+				succeeded = true
+				break
+			}
+		}
+	}
+	
+	if !succeeded {
+		var buffer bytes.Buffer
+		buffer.WriteString("Select your name:\n")
+		
+		for _, name := range *namesList {
+			buffer.WriteString("/" + name + " ")
+		}
+		
+		messages := &messages{
+			messageToSender : buffer.String(),
 		}
 		sendMessages(bot, player, nil, messages)
 		
@@ -153,6 +184,12 @@ func processUpdate(update *tgbotapi.Update, bot *tgbotapi.BotAPI, players *map[i
 	
 	if player.Gender() == game.Undefined { // if we need to choose a gender
 		isSucceeded := chooseGender(update, bot, player)
+		if isSucceeded {
+			chooseName(update, bot, player, staticData)
+		}
+	} else if player.Name() == "" { // if we need to choose name
+		isSucceeded := chooseName(update, bot, player, staticData)
+		
 		if isSucceeded {
 			matchPlayer(bot, freePlayers, player)
 		}
